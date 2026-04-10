@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Headshot Hub Profiles</title>
+<title>Headshot Hub Arena</title>
 
 <style>
 body {
@@ -12,11 +12,12 @@ font-family: Arial;
 background: radial-gradient(circle at top, #0f172a, #050814);
 color: white;
 text-align: center;
+overflow: hidden;
 }
 
 header {
-padding: 15px;
-font-size: 24px;
+padding: 12px;
+font-size: 22px;
 font-weight: bold;
 }
 
@@ -24,8 +25,8 @@ font-weight: bold;
 background: rgba(255,255,255,0.05);
 max-width: 500px;
 margin: 10px auto;
-padding: 15px;
-border-radius: 12px;
+padding: 10px;
+border-radius: 10px;
 }
 
 input {
@@ -47,51 +48,60 @@ cursor: pointer;
 
 button:hover { background: #16a34a; }
 
+#gameArea {
+position: relative;
+width: 100vw;
+height: 55vh;
+background: rgba(255,255,255,0.03);
+margin-top: 10px;
+overflow: hidden;
+}
+
+.target {
+position: absolute;
+width: 40px;
+height: 40px;
+border-radius: 50%;
+background: red;
+cursor: pointer;
+}
+
 .hidden { display: none; }
 
 .rank {
-font-size: 22px;
+font-size: 20px;
 font-weight: bold;
-}
-
-.small {
-font-size: 13px;
-opacity: 0.8;
 }
 </style>
 </head>
 
 <body>
 
-<header>🎯 Headshot Hub Profiles</header>
+<header>🎯 Headshot Hub Arena</header>
 
-<!-- LOGIN / PROFILE SELECT -->
+<!-- LOGIN -->
 <div id="login" class="card">
-<h3>Create / Select Profile</h3>
+<h3>Create Profile</h3>
 <input id="username" placeholder="Enter username">
 <br>
-<button onclick="createProfile()">Continue</button>
-<div class="small">Profiles are saved on this device</div>
+<button onclick="startProfile()">Start</button>
 </div>
 
-<!-- MAIN GAME UI -->
+<!-- MAIN -->
 <div id="app" class="hidden">
 
 <div class="card">
-<h3>👤 Player</h3>
-<div id="playerName"></div>
-<div id="rank" class="rank"></div>
-<div>RR: <span id="rr">0</span></div>
+<div>👤 <span id="name"></span></div>
+<div class="rank" id="rank"></div>
+<div>RR: <span id="rr"></span></div>
+<div>Wins: <span id="wins"></span> | Losses: <span id="losses"></span></div>
 </div>
 
-<div class="card">
-<h3>📊 Stats</h3>
-<div id="stats"></div>
-</div>
+<button onclick="startGame()">Start Aim Test</button>
 
-<button onclick="addWin()">Simulate Win</button>
-<button onclick="addLoss()">Simulate Loss</button>
-<button onclick="resetData()">Reset Profile</button>
+<div id="gameArea"></div>
+
+<div id="result" class="card"></div>
 
 </div>
 
@@ -99,36 +109,41 @@ opacity: 0.8;
 
 let profile = null;
 
-function createProfile() {
+let hits = 0;
+let shots = 0;
+let active = false;
+let startTime = 0;
+
+function startProfile() {
 let name = document.getElementById("username").value;
 if (!name) return;
 
-let data = localStorage.getItem("hh_" + name);
+let saved = localStorage.getItem("hh_" + name);
 
-if (data) {
-profile = JSON.parse(data);
+if (saved) {
+profile = JSON.parse(saved);
 } else {
 profile = {
-name: name,
+name,
 rr: 0,
 wins: 0,
-losses: 0,
-best: 0
+losses: 0
 };
 }
 
 save();
-loadUI();
 
 document.getElementById("login").classList.add("hidden");
 document.getElementById("app").classList.remove("hidden");
+
+updateUI();
 }
 
 function save() {
 localStorage.setItem("hh_" + profile.name, JSON.stringify(profile));
 }
 
-function getRank(rr) {
+function rank(rr) {
 if (rr < 100) return "Iron";
 if (rr < 200) return "Bronze";
 if (rr < 350) return "Silver";
@@ -137,46 +152,94 @@ if (rr < 700) return "Platinum";
 return "Diamond";
 }
 
-function loadUI() {
-document.getElementById("playerName").innerText = profile.name;
-
+function updateUI() {
+document.getElementById("name").innerText = profile.name;
 document.getElementById("rr").innerText = profile.rr;
-
-document.getElementById("rank").innerText = getRank(profile.rr);
-
-document.getElementById("stats").innerHTML =
-`Wins: ${profile.wins}<br>
-Losses: ${profile.losses}<br>
-Best RR: ${profile.best}`;
+document.getElementById("rank").innerText = rank(profile.rr);
+document.getElementById("wins").innerText = profile.wins;
+document.getElementById("losses").innerText = profile.losses;
 }
 
-function addWin() {
+function startGame() {
+document.getElementById("result").innerHTML = "";
+document.getElementById("gameArea").innerHTML = "";
+
+hits = 0;
+shots = 0;
+active = true;
+
+spawnTarget();
+}
+
+function spawnTarget() {
+if (!active) return;
+
+let gameArea = document.getElementById("gameArea");
+
+let target = document.createElement("div");
+target.className = "target";
+
+let x = Math.random() * (window.innerWidth - 50);
+let y = Math.random() * (gameArea.offsetHeight - 50);
+
+target.style.left = x + "px";
+target.style.top = y + "px";
+
+startTime = Date.now();
+
+target.onclick = () => {
+hits++;
+shots++;
+
+target.remove();
+
+if (shots >= 10) {
+endGame();
+} else {
+spawnTarget();
+}
+};
+
+gameArea.appendChild(target);
+
+setTimeout(() => {
+if (target.parentNode) {
+target.remove();
+shots++;
+
+if (shots >= 10) {
+endGame();
+} else {
+spawnTarget();
+}
+}
+}, 900);
+}
+
+function endGame() {
+active = false;
+
+let accuracy = (hits / 10) * 100;
+let rrGain = Math.floor(accuracy / 5);
+
+let win = accuracy >= 50;
+
+if (win) {
 profile.wins++;
-profile.rr += 25;
-
-if (profile.rr > profile.best) profile.best = profile.rr;
-
-save();
-loadUI();
-}
-
-function addLoss() {
+profile.rr += rrGain;
+} else {
 profile.losses++;
-profile.rr -= 15;
+profile.rr -= 10;
 if (profile.rr < 0) profile.rr = 0;
-
-save();
-loadUI();
 }
 
-function resetData() {
-profile.rr = 0;
-profile.wins = 0;
-profile.losses = 0;
-profile.best = 0;
-
 save();
-loadUI();
+updateUI();
+
+document.getElementById("result").innerHTML =
+`Accuracy: ${accuracy.toFixed(1)}%<br>
+${win ? "WIN +RR" : "LOSS -RR"}<br>
+RR Change: ${win ? "+" + rrGain : "-10"}`;
 }
 
 </script>
