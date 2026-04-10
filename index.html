@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Headshot Hub</title>
+<style>
+body {
+font-family: Arial, sans-serif;
+background: #0f172a;
+color: white;
+text-align: center;
+padding: 50px;
+}
+.container {
+background: #1e293b;
+padding: 30px;
+border-radius: 15px;
+max-width: 400px;
+margin: auto;
+box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+input {
+width: 80%;
+padding: 10px;
+margin: 10px;
+border-radius: 10px;
+border: none;
+font-size: 16px;
+}
+button {
+padding: 10px 20px;
+border: none;
+border-radius: 10px;
+background: #22c55e;
+color: black;
+font-weight: bold;
+cursor: pointer;
+}
+button:hover {
+background: #16a34a;
+}
+.result {
+margin-top: 20px;
+font-size: 24px;
+font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<h1>🎯 Headshot Hub</h1>
+<p>Calculate your Valorant headshot percentage instantly</p>
+
+<div class="container">
+<input type="number" id="kills" placeholder="Total Kills"><br>
+<input type="number" id="headshots" placeholder="Headshots"><br>
+<button onclick="calculate()">Calculate</button>
+
+<div class="result" id="result"></div>
+</div>
+
+<script>
+function calculate() {
+let kills = document.getElementById("kills").value;
+let headshots = document.getElementById("headshots").value;
+
+if (kills == 0 || kills === "") {
+document.getElementById("result").innerText = "Enter valid kills";
+return;
+}
+
+let percent = (headshots / kills) * 100;
+percent = percent.toFixed(2);
+
+document.getElementById("result").innerText = percent + "% Headshot Rate";
+}
+</script>
+
+</body>
+</html>
