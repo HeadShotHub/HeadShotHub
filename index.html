@@ -1,246 +1,58 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Headshot Hub Arena</title>
-
-<style>
-body {
-margin: 0;
-font-family: Arial;
-background: radial-gradient(circle at top, #0f172a, #050814);
-color: white;
-text-align: center;
-overflow: hidden;
-}
-
-header {
-padding: 12px;
-font-size: 22px;
-font-weight: bold;
-}
-
-.card {
-background: rgba(255,255,255,0.05);
-max-width: 500px;
-margin: 10px auto;
-padding: 10px;
-border-radius: 10px;
-}
-
-input {
-padding: 10px;
-width: 70%;
-border-radius: 8px;
-border: none;
-}
-
-button {
-padding: 10px 14px;
-margin: 5px;
-border-radius: 8px;
-border: none;
-background: #22c55e;
-font-weight: bold;
-cursor: pointer;
-}
-
-button:hover { background: #16a34a; }
-
-#gameArea {
-position: relative;
-width: 100vw;
-height: 55vh;
-background: rgba(255,255,255,0.03);
-margin-top: 10px;
-overflow: hidden;
-}
-
-.target {
-position: absolute;
-width: 40px;
-height: 40px;
-border-radius: 50%;
-background: red;
-cursor: pointer;
-}
-
-.hidden { display: none; }
-
-.rank {
-font-size: 20px;
-font-weight: bold;
-}
-</style>
+<title>Headshot Hub Online</title>
 </head>
-
 <body>
+<h2>Headshot Hub Online</h2>
 
-<header>🎯 Headshot Hub Arena</header>
+<button id="loginBtn">Login with Google</button>
 
-<!-- LOGIN -->
-<div id="login" class="card">
-<h3>Create Profile</h3>
-<input id="username" placeholder="Enter username">
-<br>
-<button onclick="startProfile()">Start</button>
-</div>
+<p id="status">Not logged in</p>
 
-<!-- MAIN -->
-<div id="app" class="hidden">
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+getAuth,
+GoogleAuthProvider,
+signInWithPopup,
+onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-<div class="card">
-<div>👤 <span id="name"></span></div>
-<div class="rank" id="rank"></div>
-<div>RR: <span id="rr"></span></div>
-<div>Wins: <span id="wins"></span> | Losses: <span id="losses"></span></div>
-</div>
-
-<button onclick="startGame()">Start Aim Test</button>
-
-<div id="gameArea"></div>
-
-<div id="result" class="card"></div>
-
-</div>
-
-<script>
-
-let profile = null;
-
-let hits = 0;
-let shots = 0;
-let active = false;
-let startTime = 0;
-
-function startProfile() {
-let name = document.getElementById("username").value;
-if (!name) return;
-
-let saved = localStorage.getItem("hh_" + name);
-
-if (saved) {
-profile = JSON.parse(saved);
-} else {
-profile = {
-name,
-rr: 0,
-wins: 0,
-losses: 0
-};
-}
-
-save();
-
-document.getElementById("login").classList.add("hidden");
-document.getElementById("app").classList.remove("hidden");
-
-updateUI();
-}
-
-function save() {
-localStorage.setItem("hh_" + profile.name, JSON.stringify(profile));
-}
-
-function rank(rr) {
-if (rr < 100) return "Iron";
-if (rr < 200) return "Bronze";
-if (rr < 350) return "Silver";
-if (rr < 500) return "Gold";
-if (rr < 700) return "Platinum";
-return "Diamond";
-}
-
-function updateUI() {
-document.getElementById("name").innerText = profile.name;
-document.getElementById("rr").innerText = profile.rr;
-document.getElementById("rank").innerText = rank(profile.rr);
-document.getElementById("wins").innerText = profile.wins;
-document.getElementById("losses").innerText = profile.losses;
-}
-
-function startGame() {
-document.getElementById("result").innerHTML = "";
-document.getElementById("gameArea").innerHTML = "";
-
-hits = 0;
-shots = 0;
-active = true;
-
-spawnTarget();
-}
-
-function spawnTarget() {
-if (!active) return;
-
-let gameArea = document.getElementById("gameArea");
-
-let target = document.createElement("div");
-target.className = "target";
-
-let x = Math.random() * (window.innerWidth - 50);
-let y = Math.random() * (gameArea.offsetHeight - 50);
-
-target.style.left = x + "px";
-target.style.top = y + "px";
-
-startTime = Date.now();
-
-target.onclick = () => {
-hits++;
-shots++;
-
-target.remove();
-
-if (shots >= 10) {
-endGame();
-} else {
-spawnTarget();
-}
+// 🔥 PASTE YOUR CONFIG HERE
+const firebaseConfig = {
+apiKey: "PASTE_HERE",
+authDomain: "PASTE_HERE",
+projectId: "PASTE_HERE",
+storageBucket: "PASTE_HERE",
+messagingSenderId: "PASTE_HERE",
+appId: "PASTE_HERE"
 };
 
-gameArea.appendChild(target);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
-setTimeout(() => {
-if (target.parentNode) {
-target.remove();
-shots++;
+const provider = new GoogleAuthProvider();
 
-if (shots >= 10) {
-endGame();
+document.getElementById("loginBtn").onclick = () => {
+signInWithPopup(auth, provider)
+.then((result) => {
+console.log("Logged in:", result.user.displayName);
+})
+.catch((error) => {
+console.log(error);
+});
+};
+
+onAuthStateChanged(auth, (user) => {
+if (user) {
+document.getElementById("status").innerText =
+"Logged in as: " + user.displayName;
 } else {
-spawnTarget();
+document.getElementById("status").innerText =
+"Not logged in";
 }
-}
-}, 900);
-}
-
-function endGame() {
-active = false;
-
-let accuracy = (hits / 10) * 100;
-let rrGain = Math.floor(accuracy / 5);
-
-let win = accuracy >= 50;
-
-if (win) {
-profile.wins++;
-profile.rr += rrGain;
-} else {
-profile.losses++;
-profile.rr -= 10;
-if (profile.rr < 0) profile.rr = 0;
-}
-
-save();
-updateUI();
-
-document.getElementById("result").innerHTML =
-`Accuracy: ${accuracy.toFixed(1)}%<br>
-${win ? "WIN +RR" : "LOSS -RR"}<br>
-RR Change: ${win ? "+" + rrGain : "-10"}`;
-}
+});
 
 </script>
 
