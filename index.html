@@ -1,36 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Headshot Hub Arena</title>
+<title>Headshot Hub Profiles</title>
 
 <style>
 body {
 margin: 0;
-font-family: Arial, sans-serif;
+font-family: Arial;
 background: radial-gradient(circle at top, #0f172a, #050814);
 color: white;
 text-align: center;
-overflow: hidden;
 }
 
 header {
 padding: 15px;
-font-size: 26px;
+font-size: 24px;
 font-weight: bold;
-letter-spacing: 1px;
 }
 
-#menu {
-margin-top: 10px;
+.card {
+background: rgba(255,255,255,0.05);
+max-width: 500px;
+margin: 10px auto;
+padding: 15px;
+border-radius: 12px;
+}
+
+input {
+padding: 10px;
+width: 70%;
+border-radius: 8px;
+border: none;
 }
 
 button {
 padding: 10px 14px;
 margin: 5px;
-border: none;
 border-radius: 8px;
+border: none;
 background: #22c55e;
 font-weight: bold;
 cursor: pointer;
@@ -38,203 +47,137 @@ cursor: pointer;
 
 button:hover { background: #16a34a; }
 
-#gameArea {
-position: relative;
-width: 100vw;
-height: 60vh;
-background: rgba(255,255,255,0.03);
-border-top: 1px solid rgba(255,255,255,0.1);
-border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-.target {
-position: absolute;
-width: 45px;
-height: 45px;
-border-radius: 50%;
-background: radial-gradient(circle, #ff3b3b, #7f1d1d);
-box-shadow: 0 0 10px rgba(255,0,0,0.6);
-cursor: pointer;
-}
-
-.hud {
-display: flex;
-justify-content: space-around;
-padding: 10px;
-font-size: 14px;
-opacity: 0.9;
-}
-
-.panel {
-margin-top: 10px;
-font-size: 14px;
-}
+.hidden { display: none; }
 
 .rank {
 font-size: 22px;
 font-weight: bold;
 }
 
-.green { color: #22c55e; }
-.yellow { color: #facc15; }
-.red { color: #ef4444; }
-
-#overlay {
-position: absolute;
-top: 40%;
-width: 100%;
-font-size: 28px;
-font-weight: bold;
-display: none;
+.small {
+font-size: 13px;
+opacity: 0.8;
 }
-
 </style>
 </head>
 
 <body>
 
-<header>🎯 HEADSHOT HUB ARENA</header>
+<header>🎯 Headshot Hub Profiles</header>
 
-<div id="menu">
-<button onclick="findMatch()">Find Match</button>
+<!-- LOGIN / PROFILE SELECT -->
+<div id="login" class="card">
+<h3>Create / Select Profile</h3>
+<input id="username" placeholder="Enter username">
+<br>
+<button onclick="createProfile()">Continue</button>
+<div class="small">Profiles are saved on this device</div>
 </div>
 
-<div class="hud">
-<div id="status">Status: Idle</div>
-<div id="rr">RR: 0</div>
-<div id="rank">Rank: Unranked</div>
+<!-- MAIN GAME UI -->
+<div id="app" class="hidden">
+
+<div class="card">
+<h3>👤 Player</h3>
+<div id="playerName"></div>
+<div id="rank" class="rank"></div>
+<div>RR: <span id="rr">0</span></div>
 </div>
 
-<div id="gameArea">
-<div id="overlay">MATCH FOUND</div>
+<div class="card">
+<h3>📊 Stats</h3>
+<div id="stats"></div>
 </div>
 
-<div class="panel" id="stats"></div>
+<button onclick="addWin()">Simulate Win</button>
+<button onclick="addLoss()">Simulate Loss</button>
+<button onclick="resetData()">Reset Profile</button>
+
+</div>
 
 <script>
 
-let rr = 0;
-let rank = "Unranked";
+let profile = null;
 
-let gameActive = false;
-let hits = 0;
-let shots = 0;
-let startTime = 0;
+function createProfile() {
+let name = document.getElementById("username").value;
+if (!name) return;
 
-function updateRank() {
-if (rr < 100) rank = "Iron";
-else if (rr < 200) rank = "Bronze";
-else if (rr < 350) rank = "Silver";
-else if (rr < 500) rank = "Gold";
-else if (rr < 700) rank = "Platinum";
-else rank = "Diamond";
+let data = localStorage.getItem("hh_" + name);
 
-document.getElementById("rank").innerText = "Rank: " + rank;
-}
-
-function findMatch() {
-document.getElementById("status").innerText = "Searching for opponent...";
-
-setTimeout(() => {
-startMatch();
-}, 1500);
-}
-
-function startMatch() {
-document.getElementById("status").innerText = "Match Found";
-document.getElementById("overlay").style.display = "block";
-
-setTimeout(() => {
-document.getElementById("overlay").style.display = "none";
-startRound();
-}, 1200);
-}
-
-function startRound() {
-gameActive = true;
-hits = 0;
-shots = 0;
-
-document.getElementById("status").innerText = "Round Live";
-
-spawnTarget();
-}
-
-function spawnTarget() {
-if (!gameActive) return;
-
-let gameArea = document.getElementById("gameArea");
-
-let target = document.createElement("div");
-target.className = "target";
-
-let x = Math.random() * (window.innerWidth - 60);
-let y = Math.random() * (gameArea.offsetHeight - 60);
-
-target.style.left = x + "px";
-target.style.top = y + "px";
-
-startTime = Date.now();
-
-target.onclick = () => {
-let reaction = Date.now() - startTime;
-
-hits++;
-shots++;
-
-target.remove();
-
-if (shots >= 10) {
-endMatch();
+if (data) {
+profile = JSON.parse(data);
 } else {
-setTimeout(spawnTarget, 400);
-}
+profile = {
+name: name,
+rr: 0,
+wins: 0,
+losses: 0,
+best: 0
 };
-
-gameArea.appendChild(target);
-
-setTimeout(() => {
-if (target.parentNode) {
-target.remove();
-shots++;
-
-if (shots >= 10) {
-endMatch();
-} else {
-spawnTarget();
-}
-}
-}, 900);
 }
 
-function endMatch() {
-gameActive = false;
+save();
+loadUI();
 
-let performance = hits * 10; // simple scoring
-
-let opponent = Math.floor(Math.random() * 100);
-
-let win = performance >= opponent;
-
-if (win) {
-rr += 25;
-} else {
-rr -= 15;
-if (rr < 0) rr = 0;
+document.getElementById("login").classList.add("hidden");
+document.getElementById("app").classList.remove("hidden");
 }
 
-updateRank();
+function save() {
+localStorage.setItem("hh_" + profile.name, JSON.stringify(profile));
+}
 
-document.getElementById("status").innerText =
-win ? "YOU WON +RR" : "YOU LOST -RR";
+function getRank(rr) {
+if (rr < 100) return "Iron";
+if (rr < 200) return "Bronze";
+if (rr < 350) return "Silver";
+if (rr < 500) return "Gold";
+if (rr < 700) return "Platinum";
+return "Diamond";
+}
 
-document.getElementById("rr").innerText = "RR: " + rr;
+function loadUI() {
+document.getElementById("playerName").innerText = profile.name;
+
+document.getElementById("rr").innerText = profile.rr;
+
+document.getElementById("rank").innerText = getRank(profile.rr);
 
 document.getElementById("stats").innerHTML =
-`Hits: ${hits}/10 | Your Score: ${performance} | Opponent: ${opponent}`;
+`Wins: ${profile.wins}<br>
+Losses: ${profile.losses}<br>
+Best RR: ${profile.best}`;
 }
 
-updateRank();
+function addWin() {
+profile.wins++;
+profile.rr += 25;
+
+if (profile.rr > profile.best) profile.best = profile.rr;
+
+save();
+loadUI();
+}
+
+function addLoss() {
+profile.losses++;
+profile.rr -= 15;
+if (profile.rr < 0) profile.rr = 0;
+
+save();
+loadUI();
+}
+
+function resetData() {
+profile.rr = 0;
+profile.wins = 0;
+profile.losses = 0;
+profile.best = 0;
+
+save();
+loadUI();
+}
 
 </script>
 
