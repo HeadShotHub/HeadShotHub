@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Headshot Hub</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Headshot Hub - Aim Trainer</title>
 
 <style>
 body {
@@ -12,33 +12,22 @@ font-family: Arial;
 background: #0b1220;
 color: white;
 text-align: center;
+overflow: hidden;
 }
 
 header {
-padding: 25px;
-font-size: 32px;
+padding: 15px;
+font-size: 26px;
 font-weight: bold;
 }
 
-.card {
-background: #162235;
-max-width: 520px;
-margin: 15px auto;
-padding: 20px;
-border-radius: 14px;
-}
-
-input {
-width: 80%;
-padding: 10px;
-margin: 6px;
-border-radius: 8px;
-border: none;
+#menu {
+margin-top: 10px;
 }
 
 button {
 padding: 10px 14px;
-margin: 6px;
+margin: 5px;
 border: none;
 border-radius: 8px;
 background: #22c55e;
@@ -46,129 +35,192 @@ font-weight: bold;
 cursor: pointer;
 }
 
-button:hover { background: #16a34a; }
-
-.big { font-size: 22px; margin-top: 10px; }
-
-.rank {
-font-size: 26px;
-font-weight: bold;
+button:hover {
+background: #16a34a;
 }
 
-.shareBox {
-background: #0f172a;
-padding: 12px;
-border-radius: 10px;
+#gameArea {
+position: relative;
+width: 100vw;
+height: 65vh;
+background: #111827;
+margin-top: 10px;
+overflow: hidden;
+}
+
+.target {
+position: absolute;
+width: 50px;
+height: 50px;
+border-radius: 50%;
+background: red;
+cursor: pointer;
+}
+
+.info {
+margin-top: 10px;
+}
+
+.bad { color: #ef4444; }
+.good { color: #22c55e; }
+.mid { color: #facc15; }
+
+#leaderboard {
 margin-top: 10px;
 font-size: 14px;
 }
-
-.bar {
-width: 80%;
-height: 10px;
-background: #0f172a;
-margin: 10px auto;
-border-radius: 10px;
-}
-
-.fill {
-height: 100%;
-width: 0%;
-background: #22c55e;
-}
-
 </style>
 </head>
 
 <body>
 
-<header>🎯 Headshot Hub</header>
+<header>🎯 Headshot Hub Aim Trainer</header>
 
-<div class="card">
-
-<h3>Enter Match Stats</h3>
-
-<input id="kills" type="number" placeholder="Kills">
-<input id="hs" type="number" placeholder="Headshots">
-
-<button onclick="add()">Add Match</button>
-
-<div id="result" class="big"></div>
-
-<div class="bar">
-<div class="fill" id="fill"></div>
+<div id="menu">
+<button onclick="startGame('easy')">Easy</button>
+<button onclick="startGame('medium')">Medium</button>
+<button onclick="startGame('hard')">Hard</button>
+<button onclick="startGame('impossible')">Impossible 🔥</button>
 </div>
 
-<div id="rank" class="rank"></div>
+<div class="info" id="info">Select a mode to start</div>
 
-<button onclick="share()">📤 Share Result</button>
+<div id="gameArea"></div>
 
-<div class="shareBox" id="shareBox"></div>
+<div class="info" id="stats"></div>
 
-</div>
+<div id="leaderboard"></div>
 
 <script>
 
-let data = JSON.parse(localStorage.getItem("data")) || [];
+let gameArea = document.getElementById("gameArea");
+let info = document.getElementById("info");
+let stats = document.getElementById("stats");
 
-function add() {
-let k = Number(document.getElementById("kills").value);
-let h = Number(document.getElementById("hs").value);
+let startTime;
+let score = 0;
+let clicks = 0;
+let totalReaction = 0;
+let active = false;
 
-if (!k || k <= 0) return;
+let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
 
-let pct = (h / k) * 100;
-data.push(pct);
+function startGame(mode) {
+resetGame();
+active = true;
 
-localStorage.setItem("data", JSON.stringify(data));
+let speed;
 
-update(pct);
+if (mode === "easy") speed = 1200;
+if (mode === "medium") speed = 800;
+if (mode === "hard") speed = 500;
+if (mode === "impossible") speed = 250;
+
+info.innerHTML = "Mode: " + mode.toUpperCase();
+
+spawnTarget(speed, mode);
 }
 
-function avg() {
-return data.reduce((a,b)=>a+b,0) / data.length || 0;
+function spawnTarget(speed, mode) {
+if (!active) return;
+
+let target = document.createElement("div");
+target.classList.add("target");
+
+let x = Math.random() * (window.innerWidth - 60);
+let y = Math.random() * (gameArea.offsetHeight - 60);
+
+target.style.left = x + "px";
+target.style.top = y + "px";
+
+startTime = Date.now();
+
+target.onclick = () => {
+let reaction = Date.now() - startTime;
+
+score++;
+clicks++;
+totalReaction += reaction;
+
+target.remove();
+
+updateStats();
+
+setTimeout(() => spawnTarget(speed * difficultyRamp(mode), mode), speed);
+};
+
+gameArea.appendChild(target);
+
+setTimeout(() => {
+if (target.parentNode) {
+target.remove();
+if (active) spawnTarget(speed, mode);
+}
+}, speed);
 }
 
-function rank(v) {
-if (v < 10) return "Iron";
-if (v < 18) return "Bronze";
-if (v < 25) return "Silver";
-if (v < 32) return "Gold";
-if (v < 40) return "Platinum";
-return "Radiant 🔥";
+function difficultyRamp(mode) {
+if (mode === "easy") return 1;
+if (mode === "medium") return 0.95;
+if (mode === "hard") return 0.9;
+if (mode === "impossible") return 0.75;
 }
 
-function update(latest) {
+function updateStats() {
+let avg = totalReaction / clicks;
 
-let a = avg();
-let r = rank(a);
+stats.innerHTML =
+`Hits: ${score} | Avg Reaction: ${avg.toFixed(0)}ms`;
 
-document.getElementById("result").innerHTML =
-`Latest: ${latest.toFixed(1)}% HS`;
-
-document.getElementById("rank").innerHTML =
-`Rank: ${r}`;
-
-document.getElementById("fill").style.width =
-Math.min(a, 50) * 2 + "%";
-
-document.getElementById("shareBox").innerHTML =
-"Beat this: " + latest.toFixed(1) + "% HS 🔥";
-
+if (clicks >= 10) {
+endGame();
+}
 }
 
-function share() {
-let text =
-`I just got ${avg().toFixed(1)}% HS in Headshot Hub 🎯
-Can you beat me?
+function endGame() {
+active = false;
+gameArea.innerHTML = "";
 
-Play here: https://headshothub.github.io/YOUR-REPO/`;
+let avg = totalReaction / clicks;
 
-navigator.clipboard.writeText(text);
+let entry = {
+mode: info.innerText,
+score: score,
+reaction: avg.toFixed(0)
+};
 
-document.getElementById("shareBox").innerHTML =
-"Copied! Paste it on TikTok / Discord 🔥";
+leaderboard.push(entry);
+leaderboard.sort((a,b)=>a.reaction - b.reaction);
+leaderboard = leaderboard.slice(0, 5);
+
+localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+
+showLeaderboard();
+
+stats.innerHTML += "<br><b>Game Over</b>";
+
+alert("Game Over! Avg Reaction: " + avg.toFixed(0) + "ms");
 }
+
+function showLeaderboard() {
+let html = "<h3>🏆 Local Leaderboard</h3>";
+
+leaderboard.forEach((l,i)=>{
+html += `<p>#${i+1} | ${l.reaction}ms | ${l.score} hits</p>`;
+});
+
+document.getElementById("leaderboard").innerHTML = html;
+}
+
+function resetGame() {
+gameArea.innerHTML = "";
+score = 0;
+clicks = 0;
+totalReaction = 0;
+active = false;
+}
+
+showLeaderboard();
 
 </script>
 
