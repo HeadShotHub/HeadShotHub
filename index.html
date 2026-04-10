@@ -9,23 +9,24 @@
 body {
 margin: 0;
 font-family: Arial, sans-serif;
-background: #0f172a;
+background: #0b1220;
 color: white;
 text-align: center;
 }
 
 header {
 padding: 25px;
-font-size: 28px;
+font-size: 32px;
 font-weight: bold;
 }
 
-.container {
-max-width: 500px;
-margin: auto;
-background: #1e293b;
+.card {
+background: #162235;
+max-width: 520px;
+margin: 15px auto;
 padding: 20px;
-border-radius: 12px;
+border-radius: 14px;
+box-shadow: 0 0 20px rgba(0,0,0,0.4);
 }
 
 input {
@@ -37,35 +38,48 @@ border: none;
 }
 
 button {
-padding: 10px 15px;
+padding: 10px 16px;
 margin-top: 10px;
 border: none;
 border-radius: 8px;
 background: #22c55e;
-cursor: pointer;
 font-weight: bold;
+cursor: pointer;
 }
 
 button:hover {
 background: #16a34a;
 }
 
-.result {
-margin-top: 15px;
-font-size: 20px;
-}
-
-.history {
-margin-top: 20px;
-text-align: left;
-padding: 10px;
-background: #111827;
-border-radius: 10px;
+.big {
+font-size: 22px;
+margin-top: 10px;
 }
 
 .bad { color: #ef4444; }
-.ok { color: #facc15; }
+.mid { color: #facc15; }
 .good { color: #22c55e; }
+
+.bar {
+width: 80%;
+height: 12px;
+background: #0f172a;
+border-radius: 10px;
+margin: 10px auto;
+overflow: hidden;
+}
+
+.fill {
+height: 100%;
+width: 0%;
+background: #22c55e;
+}
+
+.small {
+font-size: 14px;
+opacity: 0.8;
+}
+
 </style>
 </head>
 
@@ -73,67 +87,103 @@ border-radius: 10px;
 
 <header>🎯 Headshot Hub</header>
 
-<div class="container">
-
-<h3>Track Your Aim</h3>
+<div class="card">
+<h3>📊 Add Match Stats</h3>
 
 <input id="kills" type="number" placeholder="Total Kills">
 <input id="hs" type="number" placeholder="Headshots">
 
-<button onclick="addGame()">Add Game</button>
+<button onclick="addMatch()">Add Match</button>
 
-<div class="result" id="result"></div>
+<div id="output" class="big"></div>
 
-<div class="history">
-<h4>📊 Game History</h4>
+<div class="bar">
+<div class="fill" id="bar"></div>
+</div>
+
+<div id="rankText" class="small"></div>
+</div>
+
+<div class="card">
+<h3>🔥 Your Rank</h3>
+<div id="rank" class="big">Unranked</div>
+</div>
+
+<div class="card">
+<h3>📈 Progress History</h3>
 <div id="history"></div>
 </div>
 
-</div>
-
 <script>
-let games = JSON.parse(localStorage.getItem("games")) || [];
 
-function addGame() {
-let kills = Number(document.getElementById("kills").value);
-let hs = Number(document.getElementById("hs").value);
+let data = JSON.parse(localStorage.getItem("data")) || [];
 
-if (!kills || kills <= 0) {
-document.getElementById("result").innerText = "Enter valid kills";
-return;
+function addMatch() {
+let k = Number(document.getElementById("kills").value);
+let h = Number(document.getElementById("hs").value);
+
+if (!k || k <= 0) return;
+
+let percent = (h / k) * 100;
+
+data.push(percent);
+localStorage.setItem("data", JSON.stringify(data));
+
+updateUI(percent);
 }
 
-let percent = (hs / kills) * 100;
-
-games.push({kills, hs, percent});
-localStorage.setItem("games", JSON.stringify(games));
-
-showResult(percent);
-showHistory();
+function getAverage() {
+if (data.length === 0) return 0;
+return data.reduce((a,b)=>a+b,0)/data.length;
 }
 
-function showResult(p) {
+function getRank(avg) {
+if (avg < 10) return "Iron";
+if (avg < 18) return "Bronze";
+if (avg < 25) return "Silver";
+if (avg < 32) return "Gold";
+if (avg < 40) return "Platinum";
+return "Radiant";
+}
+
+function updateUI(latest) {
+
+let avg = getAverage();
+let rank = getRank(avg);
+
 let msg = "";
 
-if (p < 15) msg = "⚠️ Work on crosshair placement";
-else if (p < 25) msg = "📈 Average aim - keep improving";
-else msg = "🔥 Strong aim - good job";
+if (latest < 15) msg = "⚠️ Work on crosshair placement";
+else if (latest < 25) msg = "📈 Improving aim";
+else msg = "🔥 Strong performance";
 
-document.getElementById("result").innerHTML =
-`${p.toFixed(2)}% HS <br> ${msg}`;
+document.getElementById("output").innerHTML =
+`Latest: ${latest.toFixed(1)}% HS`;
+
+document.getElementById("rank").innerHTML = rank;
+
+let progress = Math.min(avg, 50) * 2;
+
+document.getElementById("bar").style.width = progress + "%";
+
+document.getElementById("rankText").innerHTML =
+`Average HS: ${avg.toFixed(1)}%`;
+
+renderHistory();
 }
 
-function showHistory() {
+function renderHistory() {
 let html = "";
 
-games.slice().reverse().forEach((g, i) => {
-html += `<p>Game ${games.length - i}: ${g.percent.toFixed(1)}% HS</p>`;
+data.slice().reverse().forEach((d,i)=>{
+html += `<p>Match ${data.length - i}: ${d.toFixed(1)}% HS</p>`;
 });
 
 document.getElementById("history").innerHTML = html;
 }
 
-showHistory();
+renderHistory();
+
 </script>
 
 </body>
