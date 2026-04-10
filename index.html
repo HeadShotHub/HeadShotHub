@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Headshot Hub - Aim Trainer</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Headshot Hub Arena</title>
 
 <style>
 body {
 margin: 0;
-font-family: Arial;
-background: #0b1220;
+font-family: Arial, sans-serif;
+background: radial-gradient(circle at top, #0f172a, #050814);
 color: white;
 text-align: center;
 overflow: hidden;
@@ -19,6 +19,7 @@ header {
 padding: 15px;
 font-size: 26px;
 font-weight: bold;
+letter-spacing: 1px;
 }
 
 #menu {
@@ -35,97 +36,137 @@ font-weight: bold;
 cursor: pointer;
 }
 
-button:hover {
-background: #16a34a;
-}
+button:hover { background: #16a34a; }
 
 #gameArea {
 position: relative;
 width: 100vw;
-height: 65vh;
-background: #111827;
-margin-top: 10px;
-overflow: hidden;
+height: 60vh;
+background: rgba(255,255,255,0.03);
+border-top: 1px solid rgba(255,255,255,0.1);
+border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 .target {
 position: absolute;
-width: 50px;
-height: 50px;
+width: 45px;
+height: 45px;
 border-radius: 50%;
-background: red;
+background: radial-gradient(circle, #ff3b3b, #7f1d1d);
+box-shadow: 0 0 10px rgba(255,0,0,0.6);
 cursor: pointer;
 }
 
-.info {
-margin-top: 10px;
+.hud {
+display: flex;
+justify-content: space-around;
+padding: 10px;
+font-size: 14px;
+opacity: 0.9;
 }
 
-.bad { color: #ef4444; }
-.good { color: #22c55e; }
-.mid { color: #facc15; }
-
-#leaderboard {
+.panel {
 margin-top: 10px;
 font-size: 14px;
 }
+
+.rank {
+font-size: 22px;
+font-weight: bold;
+}
+
+.green { color: #22c55e; }
+.yellow { color: #facc15; }
+.red { color: #ef4444; }
+
+#overlay {
+position: absolute;
+top: 40%;
+width: 100%;
+font-size: 28px;
+font-weight: bold;
+display: none;
+}
+
 </style>
 </head>
 
 <body>
 
-<header>🎯 Headshot Hub Aim Trainer</header>
+<header>🎯 HEADSHOT HUB ARENA</header>
 
 <div id="menu">
-<button onclick="startGame('easy')">Easy</button>
-<button onclick="startGame('medium')">Medium</button>
-<button onclick="startGame('hard')">Hard</button>
-<button onclick="startGame('impossible')">Impossible 🔥</button>
+<button onclick="findMatch()">Find Match</button>
 </div>
 
-<div class="info" id="info">Select a mode to start</div>
+<div class="hud">
+<div id="status">Status: Idle</div>
+<div id="rr">RR: 0</div>
+<div id="rank">Rank: Unranked</div>
+</div>
 
-<div id="gameArea"></div>
+<div id="gameArea">
+<div id="overlay">MATCH FOUND</div>
+</div>
 
-<div class="info" id="stats"></div>
-
-<div id="leaderboard"></div>
+<div class="panel" id="stats"></div>
 
 <script>
 
-let gameArea = document.getElementById("gameArea");
-let info = document.getElementById("info");
-let stats = document.getElementById("stats");
+let rr = 0;
+let rank = "Unranked";
 
-let startTime;
-let score = 0;
-let clicks = 0;
-let totalReaction = 0;
-let active = false;
+let gameActive = false;
+let hits = 0;
+let shots = 0;
+let startTime = 0;
 
-let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+function updateRank() {
+if (rr < 100) rank = "Iron";
+else if (rr < 200) rank = "Bronze";
+else if (rr < 350) rank = "Silver";
+else if (rr < 500) rank = "Gold";
+else if (rr < 700) rank = "Platinum";
+else rank = "Diamond";
 
-function startGame(mode) {
-resetGame();
-active = true;
-
-let speed;
-
-if (mode === "easy") speed = 1200;
-if (mode === "medium") speed = 800;
-if (mode === "hard") speed = 500;
-if (mode === "impossible") speed = 250;
-
-info.innerHTML = "Mode: " + mode.toUpperCase();
-
-spawnTarget(speed, mode);
+document.getElementById("rank").innerText = "Rank: " + rank;
 }
 
-function spawnTarget(speed, mode) {
-if (!active) return;
+function findMatch() {
+document.getElementById("status").innerText = "Searching for opponent...";
+
+setTimeout(() => {
+startMatch();
+}, 1500);
+}
+
+function startMatch() {
+document.getElementById("status").innerText = "Match Found";
+document.getElementById("overlay").style.display = "block";
+
+setTimeout(() => {
+document.getElementById("overlay").style.display = "none";
+startRound();
+}, 1200);
+}
+
+function startRound() {
+gameActive = true;
+hits = 0;
+shots = 0;
+
+document.getElementById("status").innerText = "Round Live";
+
+spawnTarget();
+}
+
+function spawnTarget() {
+if (!gameActive) return;
+
+let gameArea = document.getElementById("gameArea");
 
 let target = document.createElement("div");
-target.classList.add("target");
+target.className = "target";
 
 let x = Math.random() * (window.innerWidth - 60);
 let y = Math.random() * (gameArea.offsetHeight - 60);
@@ -138,15 +179,16 @@ startTime = Date.now();
 target.onclick = () => {
 let reaction = Date.now() - startTime;
 
-score++;
-clicks++;
-totalReaction += reaction;
+hits++;
+shots++;
 
 target.remove();
 
-updateStats();
-
-setTimeout(() => spawnTarget(speed * difficultyRamp(mode), mode), speed);
+if (shots >= 10) {
+endMatch();
+} else {
+setTimeout(spawnTarget, 400);
+}
 };
 
 gameArea.appendChild(target);
@@ -154,73 +196,45 @@ gameArea.appendChild(target);
 setTimeout(() => {
 if (target.parentNode) {
 target.remove();
-if (active) spawnTarget(speed, mode);
-}
-}, speed);
-}
+shots++;
 
-function difficultyRamp(mode) {
-if (mode === "easy") return 1;
-if (mode === "medium") return 0.95;
-if (mode === "hard") return 0.9;
-if (mode === "impossible") return 0.75;
-}
-
-function updateStats() {
-let avg = totalReaction / clicks;
-
-stats.innerHTML =
-`Hits: ${score} | Avg Reaction: ${avg.toFixed(0)}ms`;
-
-if (clicks >= 10) {
-endGame();
+if (shots >= 10) {
+endMatch();
+} else {
+spawnTarget();
 }
 }
-
-function endGame() {
-active = false;
-gameArea.innerHTML = "";
-
-let avg = totalReaction / clicks;
-
-let entry = {
-mode: info.innerText,
-score: score,
-reaction: avg.toFixed(0)
-};
-
-leaderboard.push(entry);
-leaderboard.sort((a,b)=>a.reaction - b.reaction);
-leaderboard = leaderboard.slice(0, 5);
-
-localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
-
-showLeaderboard();
-
-stats.innerHTML += "<br><b>Game Over</b>";
-
-alert("Game Over! Avg Reaction: " + avg.toFixed(0) + "ms");
+}, 900);
 }
 
-function showLeaderboard() {
-let html = "<h3>🏆 Local Leaderboard</h3>";
+function endMatch() {
+gameActive = false;
 
-leaderboard.forEach((l,i)=>{
-html += `<p>#${i+1} | ${l.reaction}ms | ${l.score} hits</p>`;
-});
+let performance = hits * 10; // simple scoring
 
-document.getElementById("leaderboard").innerHTML = html;
+let opponent = Math.floor(Math.random() * 100);
+
+let win = performance >= opponent;
+
+if (win) {
+rr += 25;
+} else {
+rr -= 15;
+if (rr < 0) rr = 0;
 }
 
-function resetGame() {
-gameArea.innerHTML = "";
-score = 0;
-clicks = 0;
-totalReaction = 0;
-active = false;
+updateRank();
+
+document.getElementById("status").innerText =
+win ? "YOU WON +RR" : "YOU LOST -RR";
+
+document.getElementById("rr").innerText = "RR: " + rr;
+
+document.getElementById("stats").innerHTML =
+`Hits: ${hits}/10 | Your Score: ${performance} | Opponent: ${opponent}`;
 }
 
-showLeaderboard();
+updateRank();
 
 </script>
 
