@@ -1,79 +1,139 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Headshot Hub</title>
+
 <style>
 body {
+margin: 0;
 font-family: Arial, sans-serif;
 background: #0f172a;
 color: white;
 text-align: center;
-padding: 50px;
 }
+
+header {
+padding: 25px;
+font-size: 28px;
+font-weight: bold;
+}
+
 .container {
-background: #1e293b;
-padding: 30px;
-border-radius: 15px;
-max-width: 400px;
+max-width: 500px;
 margin: auto;
-box-shadow: 0 0 20px rgba(0,0,0,0.5);
+background: #1e293b;
+padding: 20px;
+border-radius: 12px;
 }
+
 input {
 width: 80%;
 padding: 10px;
-margin: 10px;
-border-radius: 10px;
+margin: 8px;
+border-radius: 8px;
 border: none;
-font-size: 16px;
 }
+
 button {
-padding: 10px 20px;
+padding: 10px 15px;
+margin-top: 10px;
 border: none;
-border-radius: 10px;
+border-radius: 8px;
 background: #22c55e;
-color: black;
-font-weight: bold;
 cursor: pointer;
+font-weight: bold;
 }
+
 button:hover {
 background: #16a34a;
 }
+
 .result {
-margin-top: 20px;
-font-size: 24px;
-font-weight: bold;
+margin-top: 15px;
+font-size: 20px;
 }
+
+.history {
+margin-top: 20px;
+text-align: left;
+padding: 10px;
+background: #111827;
+border-radius: 10px;
+}
+
+.bad { color: #ef4444; }
+.ok { color: #facc15; }
+.good { color: #22c55e; }
 </style>
 </head>
+
 <body>
 
-<h1>🎯 Headshot Hub</h1>
-<p>Calculate your Valorant headshot percentage instantly</p>
+<header>🎯 Headshot Hub</header>
 
 <div class="container">
-<input type="number" id="kills" placeholder="Total Kills"><br>
-<input type="number" id="headshots" placeholder="Headshots"><br>
-<button onclick="calculate()">Calculate</button>
+
+<h3>Track Your Aim</h3>
+
+<input id="kills" type="number" placeholder="Total Kills">
+<input id="hs" type="number" placeholder="Headshots">
+
+<button onclick="addGame()">Add Game</button>
 
 <div class="result" id="result"></div>
+
+<div class="history">
+<h4>📊 Game History</h4>
+<div id="history"></div>
+</div>
+
 </div>
 
 <script>
-function calculate() {
-let kills = document.getElementById("kills").value;
-let headshots = document.getElementById("headshots").value;
+let games = JSON.parse(localStorage.getItem("games")) || [];
 
-if (kills == 0 || kills === "") {
+function addGame() {
+let kills = Number(document.getElementById("kills").value);
+let hs = Number(document.getElementById("hs").value);
+
+if (!kills || kills <= 0) {
 document.getElementById("result").innerText = "Enter valid kills";
 return;
 }
 
-let percent = (headshots / kills) * 100;
-percent = percent.toFixed(2);
+let percent = (hs / kills) * 100;
 
-document.getElementById("result").innerText = percent + "% Headshot Rate";
+games.push({kills, hs, percent});
+localStorage.setItem("games", JSON.stringify(games));
+
+showResult(percent);
+showHistory();
 }
+
+function showResult(p) {
+let msg = "";
+
+if (p < 15) msg = "⚠️ Work on crosshair placement";
+else if (p < 25) msg = "📈 Average aim - keep improving";
+else msg = "🔥 Strong aim - good job";
+
+document.getElementById("result").innerHTML =
+`${p.toFixed(2)}% HS <br> ${msg}`;
+}
+
+function showHistory() {
+let html = "";
+
+games.slice().reverse().forEach((g, i) => {
+html += `<p>Game ${games.length - i}: ${g.percent.toFixed(1)}% HS</p>`;
+});
+
+document.getElementById("history").innerHTML = html;
+}
+
+showHistory();
 </script>
 
 </body>
